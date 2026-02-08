@@ -1,16 +1,22 @@
 package com.leodev.icompras.pedidos.service;
 
 import com.leodev.icompras.pedidos.client.ServicoBancarioClient;
+import com.leodev.icompras.pedidos.model.DadosPagamento;
 import com.leodev.icompras.pedidos.model.Pedido;
+import com.leodev.icompras.pedidos.model.enums.StatusPedido;
+import com.leodev.icompras.pedidos.model.enums.TipoPagamento;
+import com.leodev.icompras.pedidos.model.exception.ItemNaoEncontradoException;
 import com.leodev.icompras.pedidos.repository.ItemPedidoRepository;
 import com.leodev.icompras.pedidos.repository.PedidoRepository;
 import com.leodev.icompras.pedidos.validator.PedidoValidator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PedidoService {
 
     private final PedidoRepository repository;
@@ -34,5 +40,52 @@ public class PedidoService {
     private void realizarPersistencia(Pedido pedido) {
         repository.save(pedido);
         itemPedidoRepository.saveAll(pedido.getItens());
+    }
+
+    public void atualizarStatusPagamento(
+            Long codigoPedido, String chavePagamento, boolean sucesso, String observacoes) {
+        var pedidoEncontrado = repository
+                .findByCodigoAndChavePagamento(codigoPedido, chavePagamento);
+
+        if (pedidoEncontrado.isEmpty()){
+            var msg = String.format("Pedido não encontrado para o código %d e chave pagamento %s", codigoPedido, chavePagamento);
+            log.error(msg);
+            return;
+        }
+
+        Pedido pedido = pedidoEncontrado.get();
+
+        if (sucesso){
+            pedido.setStatus(StatusPedido.PAGO);
+        } else {
+            pedido.setStatus(StatusPedido.ERRO_PAGAMENTO);
+            pedido.setObservacoes(observacoes);
+        }
+        repository.save(pedido);
+    }
+
+    @Transactional
+    public void adicionarNovoPagamento(Long codigoPedido, String dadosCartao, TipoPagamento tipo){
+        var pedidoEncontrado = repository.findById(codigoPedido);
+
+        if (pedidoEncontrado.isEmpty()){
+            throw new ItemNaoEncontradoException("Pedido não encontrado para o código informado.");
+        }
+
+        var pedido = pedidoEncontrado.get();
+
+        DadosPagamento dadosPagamento = new DadosPagamento();
+
+        dadosPagamento.setTipoPagamento(tipo);
+        dadosPagamento.setDados(dadosCartao);
+
+        pedido.setDadosPagamento(dadosPagamento);
+        pedido.setStatus(StatusPedido.REALIZADO);
+        pedido.setObservacoes("Novo pagamento realizado, aguardando o processamento.");
+
+        String novaChavePagamento = servicoBancarioClient.solicitarPagamento(pedido);
+        pedido.setChavePagamento(novaChavePagamento);
+
+        repository.save(pedido);
     }
 }
