@@ -1,5 +1,6 @@
 package com.leodev.icompras.pedidos.model;
 
+import com.leodev.icompras.pedidos.client.representation.ClientesRepresentation;
 import com.leodev.icompras.pedidos.controller.dto.DadosPagamentoDTO;
 import com.leodev.icompras.pedidos.model.enums.StatusPedido;
 import jakarta.persistence.*;
@@ -52,4 +53,7 @@ public class Pedido {
 
     @OneToMany(mappedBy = "pedido")
     private List<ItemPedido> itens;
+
+    @Transient
+    private ClientesRepresentation dadosCliente;
 }
