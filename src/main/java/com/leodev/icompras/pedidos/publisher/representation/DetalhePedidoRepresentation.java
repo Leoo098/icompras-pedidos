@@ -17,6 +17,8 @@ public record DetalhePedidoRepresentation(
         String dataPedido,
         String total,
         StatusPedido status,
+        String urlNotaFiscal,
+        String codigoRastreio,
         List<DetalheItemPedidoRepresentation> itens
 ) {
 }
