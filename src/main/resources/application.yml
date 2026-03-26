@@ -2,7 +2,7 @@ spring:
   application:
     name: pedidos
   datasource:
-    url: jdbc:postgresql://localhost:5555/icompraspedidos
+    url: jdbc:postgresql://localhost:5557/icompras_pedidos
     username: postgres
     password: postgres
     driver-class-name: org.postgresql.Driver
